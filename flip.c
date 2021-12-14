@@ -18,27 +18,38 @@
 #include <errno.h> // for perror()
 #include <pthread.h>
 #include <string.h>
+#include <semaphore.h>
 
 #include "uint128.h"
 #include "flip.h"
 
+// declare a mutex, and it is initialized as well
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_mutex = PTHREAD_MUTEX_INITIALIZER;
+sem_t semaphore;
+
 static void bit_flip(int index, int bit);
-static void set_all(); 
+static void set_all();
 static void print_array();
-void *routine(void* arg)
+int sem_value;
+void *routine(void *arg)
 {
     printf("Test from threads\n");
     int i = *(int *)arg;
-     //determines how many multiples there are
-        int j = 1;
-        while (i * j <= NROF_PIECES)
-        {
-            bit_flip((i * j) / 128, (i * j) % 128); //sets bit (i*j mod 128) of index i*j div 128
-            j++;
-        }
-    
-    free(arg);
+    //determines how many multiples there are
+    int j = 1;
+    while (i * j <= NROF_PIECES)
+    {
+        pthread_mutex_lock(&mutex);
+        bit_flip((i * j) / 128, (i * j) % 128); //sets bit (i*j mod 128) of index i*j div 128
+        j++;
+        pthread_mutex_unlock(&mutex);
+    }
 
+    free(arg);
+    sem_post(&semaphore);
+    printf("Released semaphore\n");
+    pthread_exit(0);
 }
 
 int main(void)
@@ -48,48 +59,52 @@ int main(void)
     //  see bit_flip() how to manipulate bits in a large integer)
 
     pthread_t threads[NROF_THREADS];
+    //create a detached thread that at the end of its life will call V(s) to maintain the inv
+    static pthread_attr_t detachedThread;
+    pthread_attr_init(&detachedThread);
+    sem_init(&semaphore, 0, NROF_THREADS);
+    pthread_attr_setdetachstate(&detachedThread, PTHREAD_CREATE_DETACHED);
 
     //sets all bits to 1
     set_all();
 
-    for (int i = 0; i < NROF_THREADS; i++)
+    //P(s)
+
+    for (int i = 2; i <= NROF_PIECES; i++)
     {
         int *a = malloc(sizeof(int));
-            *a = i;
-        if (pthread_create(threads + i, NULL, routine, a))
+        *a = i;
+    
+        //put some thread in there
+        sem_wait(&semaphore);
+        pthread_mutex_lock(&s_mutex);
+        sem_getvalue(&semaphore,&sem_value);
+        printf("Semaphore value %d index should be %d \n",sem_value, (NROF_THREADS - sem_value - 1));
+        pthread_mutex_unlock(&s_mutex);
+        if (pthread_create(threads + (NROF_THREADS - sem_value - 1), NULL, routine, a))
         {
-            
+
             printf(stderr, "Creation of thread %d failed\n", i);
             return 1;
         }
     }
 
-  
-    
-    bit_flip(1, 1);
-    // printf("%d\n",buffer[1]);
-    for (int i = 2; i <= NROF_PIECES; i++)
-    {
-        //determines how many multiples there are
-        int j = 1;
-        while (i * j <= NROF_PIECES)
-        {
-            bit_flip((i * j) / 128, (i * j) % 128); //sets bit (i*j mod 128) of index i*j div 128
-            j++;
-        }
-    }
-    printf("v (all 1's) : %lx%016lx\n", HI(buffer[1]), LO(buffer[1]));
-    print_array();
+    // printf("v (all 1's) : %lx%016lx\n", HI(buffer[1]), LO(buffer[1]));
+    // print_array();
 
-      for (int i = 0; i < NROF_THREADS; i++)
-    {
-        if (pthread_join(threads[i], NULL))
-        {
-            printf(stderr, "Failed to join with thread %d \n", i);
-            return 1;
-        }
-    }
+    //no longer need to join in case of detached threads
 
+    //   for (int i = 0; i < NROF_THREADS; i++)
+    // {
+    //     if (pthread_join(threads[i], NULL))
+    //     {
+    //         printf(stderr, "Failed to join with thread %d \n", i);
+    //         return 1;
+    //     }
+    // }
+
+    pthread_attr_destroy(&detachedThread);
+    sem_destroy(&semaphore);
 
     return (0);
 }
