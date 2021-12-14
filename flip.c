@@ -2,8 +2,8 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Threaded Application
  *
- * STUDENT_NAME_1 (STUDENT_NR_1)
- * STUDENT_NAME_2 (STUDENT_NR_2)
+ * Eric Abraham (1408828)
+ * Matthew Biskas (1430033)
  *
  * Grading:
  * Students who hand in clean code that fully satisfies the minimum requirements will get an 8. 
@@ -22,6 +22,18 @@
 
 #include "uint128.h"
 #include "flip.h"
+
+// create a bitmask where bit at position n is set
+#define BITMASK(n) (((uint128_t)1) << (n))
+
+// check if bit n in v is set
+#define BIT_IS_SET(v, n) (((v)&BITMASK(n)) == BITMASK(n))
+
+// set bit n in v
+#define BIT_SET(v, n) ((v) = (v) | BITMASK(n))
+
+// clear bit n in v
+#define BIT_CLEAR(v, n) ((v) = (v) & ~BITMASK(n))
 
 // declare a mutex, and it is initialized as well
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -109,13 +121,12 @@ int main(void)
     //printf("Nr is %d\n", sem_value);
     if (sem_value == NROF_THREADS)
     {
-
     }
 
-        pthread_attr_destroy(&detachedThread);
-        sem_destroy(&semaphore);
-        print_array();
-        return (0);
+    pthread_attr_destroy(&detachedThread);
+    sem_destroy(&semaphore);
+    print_array();
+    return (0);
 }
 
 static void set_all()
@@ -129,15 +140,14 @@ static void set_all()
 
 static void print_array()
 {
-    FILE *ptr = fopen("text.txt", "w");
-
     for (int i = 2; i <= NROF_PIECES; i++)
     {
-        if (BIT_IS_SET(buffer[i / 128], i % 128)) {
+        if (BIT_IS_SET(buffer[i / 128], i % 128))
+        {
             //used to print to a file
             //fprintf(ptr, "%d ", i);
             //print to stout
-            printf("%d\n",i);
+            printf("%d\n", i);
         }
     }
     close(fopen);
