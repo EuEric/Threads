@@ -141,7 +141,7 @@ static void set_all()
 static void print_array()
 {
     fflush(stdout);
-    for (int i = 2; i <= NROF_PIECES; i++)
+    for (int i = 1; i <= NROF_PIECES; i++)
     {
         if (BIT_IS_SET(buffer[i / 128], i % 128))
         {
