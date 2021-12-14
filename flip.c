@@ -48,7 +48,7 @@ int sem_value;
 void *routine(void *arg)
 {
     //fflush(stdout);
-    fprintf(stderr,"Test from threads\n");
+    //fprintf(stderr,"Test from threads\n");
     int i = *(int *)arg;
     //determines how many multiples there are
     //fprintf(file,"%d\n",i);
@@ -78,9 +78,9 @@ int main(void)
     //file = fopen("text.txt","w");
 
     // create a detached thread that at the end of its life will call V(s) to maintain the inv
-    // static pthread_attr_t detachedThread;
-    // pthread_attr_init(&detachedThread);
-    // pthread_attr_setdetachstate(&detachedThread, PTHREAD_CREATE_DETACHED);
+    static pthread_attr_t detachedThread;
+    pthread_attr_init(&detachedThread);
+    pthread_attr_setdetachstate(&detachedThread, PTHREAD_CREATE_DETACHED);
 
     //sets all bits to 1
     set_all();
@@ -98,7 +98,7 @@ int main(void)
         sem_getvalue(&semaphore, &sem_value);
         //printf("Semaphore value %d index should be %d \n", sem_value, (NROF_THREADS - sem_value - 1));
         pthread_mutex_unlock(&s_mutex);
-        if (pthread_create(threads + (NROF_THREADS - sem_value - 1), NULL, routine, a) != 0)
+        if (pthread_create(threads + (NROF_THREADS - sem_value - 1), &detachedThread, routine, a) != 0)
         {
 
             fprintf(stderr, "Oh dear, something went wrong with create! %s\n", strerror(errno));
@@ -109,16 +109,16 @@ int main(void)
     // printf("v (all 1's) : %lx%016lx\n", HI(buffer[1]), LO(buffer[1]));
     // print_array();
 
-    //no longer need to join in case of detached threads
+    // //no longer need to join in case of detached threads
 
-    for (int i = 0; i < NROF_THREADS; i++)
-    {
-        if (pthread_join(threads[i], NULL) != 0)
-        {
-            fprintf(stderr, "Oh dear, something went wrong with join! %s\n", strerror(errno));
-            return 1;
-        }
-    }
+    // for (int i = 0; i < NROF_THREADS; i++)
+    // {
+    //     if (pthread_join(threads[i], NULL) != 0)
+    //     {
+    //         fprintf(stderr, "Oh dear, something went wrong with join! %s\n", strerror(errno));
+    //         return 1;
+    //     }
+    // }
 
     // sem_wait(&semaphore);
     // pthread_mutex_lock(&s_mutex);
