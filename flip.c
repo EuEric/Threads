@@ -34,7 +34,7 @@ static void print_array();
 int sem_value;
 void *routine(void *arg)
 {
-    printf("Test from threads\n");
+    //printf("Test from threads\n");
     int i = *(int *)arg;
     //determines how many multiples there are
     int j = 1;
@@ -48,7 +48,7 @@ void *routine(void *arg)
 
     free(arg);
     sem_post(&semaphore);
-    printf("Released semaphore\n");
+    //printf("Released semaphore\n");
     pthread_exit(0);
 }
 
@@ -59,7 +59,7 @@ int main(void)
     //  see bit_flip() how to manipulate bits in a large integer)
 
     pthread_t threads[NROF_THREADS];
-    //create a detached thread that at the end of its life will call V(s) to maintain the inv
+    // create a detached thread that at the end of its life will call V(s) to maintain the inv
     static pthread_attr_t detachedThread;
     pthread_attr_init(&detachedThread);
     sem_init(&semaphore, 0, NROF_THREADS);
@@ -74,17 +74,17 @@ int main(void)
     {
         int *a = malloc(sizeof(int));
         *a = i;
-    
+
         //put some thread in there
         sem_wait(&semaphore);
         pthread_mutex_lock(&s_mutex);
-        sem_getvalue(&semaphore,&sem_value);
-        printf("Semaphore value %d index should be %d \n",sem_value, (NROF_THREADS - sem_value - 1));
+        sem_getvalue(&semaphore, &sem_value);
+        //printf("Semaphore value %d index should be %d \n", sem_value, (NROF_THREADS - sem_value - 1));
         pthread_mutex_unlock(&s_mutex);
         if (pthread_create(threads + (NROF_THREADS - sem_value - 1), NULL, routine, a))
         {
 
-            printf(stderr, "Creation of thread %d failed\n", i);
+            //printf(stderr, "Creation of thread %d failed\n", i);
             return 1;
         }
     }
@@ -94,19 +94,28 @@ int main(void)
 
     //no longer need to join in case of detached threads
 
-    //   for (int i = 0; i < NROF_THREADS; i++)
-    // {
-    //     if (pthread_join(threads[i], NULL))
-    //     {
-    //         printf(stderr, "Failed to join with thread %d \n", i);
-    //         return 1;
-    //     }
-    // }
+    for (int i = 0; i < NROF_THREADS; i++)
+    {
+        if (pthread_join(threads[i], NULL))
+        {
+            //printf(stderr, "Failed to join with thread %d \n", i);
+            return 1;
+        }
+    }
 
-    pthread_attr_destroy(&detachedThread);
-    sem_destroy(&semaphore);
+    sem_wait(&semaphore);
+    pthread_mutex_lock(&s_mutex);
+    sem_getvalue(&semaphore, &sem_value);
+    //printf("Nr is %d\n", sem_value);
+    if (sem_value == NROF_THREADS)
+    {
 
-    return (0);
+    }
+
+        pthread_attr_destroy(&detachedThread);
+        sem_destroy(&semaphore);
+        print_array();
+        return (0);
 }
 
 static void set_all()
@@ -120,9 +129,18 @@ static void set_all()
 
 static void print_array()
 {
+    FILE *ptr = fopen("text.txt", "w");
 
-    for (int i = 0; i < sizeof(buffer) / sizeof(uint128_t); i++)
-        printf("Piece at position %d %lx%016lx\n", i, HI(buffer[i]), LO(buffer[i]));
+    for (int i = 2; i <= NROF_PIECES; i++)
+    {
+        if (BIT_IS_SET(buffer[i / 128], i % 128)) {
+            //used to print to a file
+            //fprintf(ptr, "%d ", i);
+            //print to stout
+            printf("%d\n",i);
+        }
+    }
+    close(fopen);
 }
 
 static void
