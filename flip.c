@@ -44,11 +44,14 @@ static void bit_flip(int index, int bit);
 static void set_all();
 static void print_array();
 int sem_value;
+//FILE *file;
 void *routine(void *arg)
 {
-    //printf("Test from threads\n");
+    //fflush(stdout);
+    fprintf(stderr,"Test from threads\n");
     int i = *(int *)arg;
     //determines how many multiples there are
+    //fprintf(file,"%d\n",i);
     int j = 1;
     while (i * j <= NROF_PIECES)
     {
@@ -71,11 +74,13 @@ int main(void)
     //  see bit_flip() how to manipulate bits in a large integer)
 
     pthread_t threads[NROF_THREADS];
-    // create a detached thread that at the end of its life will call V(s) to maintain the inv
-    static pthread_attr_t detachedThread;
-    pthread_attr_init(&detachedThread);
     sem_init(&semaphore, 0, NROF_THREADS);
-    pthread_attr_setdetachstate(&detachedThread, PTHREAD_CREATE_DETACHED);
+    //file = fopen("text.txt","w");
+
+    // create a detached thread that at the end of its life will call V(s) to maintain the inv
+    // static pthread_attr_t detachedThread;
+    // pthread_attr_init(&detachedThread);
+    // pthread_attr_setdetachstate(&detachedThread, PTHREAD_CREATE_DETACHED);
 
     //sets all bits to 1
     set_all();
@@ -93,10 +98,10 @@ int main(void)
         sem_getvalue(&semaphore, &sem_value);
         //printf("Semaphore value %d index should be %d \n", sem_value, (NROF_THREADS - sem_value - 1));
         pthread_mutex_unlock(&s_mutex);
-        if (pthread_create(threads + (NROF_THREADS - sem_value - 1), NULL, routine, a))
+        if (pthread_create(threads + (NROF_THREADS - sem_value - 1), NULL, routine, a) != 0)
         {
 
-            //printf(stderr, "Creation of thread %d failed\n", i);
+            fprintf(stderr, "Oh dear, something went wrong with create! %s\n", strerror(errno));
             return 1;
         }
     }
@@ -108,24 +113,25 @@ int main(void)
 
     for (int i = 0; i < NROF_THREADS; i++)
     {
-        if (pthread_join(threads[i], NULL))
+        if (pthread_join(threads[i], NULL) != 0)
         {
-            //printf(stderr, "Failed to join with thread %d \n", i);
+            fprintf(stderr, "Oh dear, something went wrong with join! %s\n", strerror(errno));
             return 1;
         }
     }
 
-    sem_wait(&semaphore);
-    pthread_mutex_lock(&s_mutex);
-    sem_getvalue(&semaphore, &sem_value);
-    //printf("Nr is %d\n", sem_value);
-    if (sem_value == NROF_THREADS)
-    {
-    }
+    // sem_wait(&semaphore);
+    // pthread_mutex_lock(&s_mutex);
+    // sem_getvalue(&semaphore, &sem_value);
+    // //printf("Nr is %d\n", sem_value);
+    // if (sem_value == NROF_THREADS)
+    // {
+    // }
 
-    pthread_attr_destroy(&detachedThread);
+    //pthread_attr_destroy(&detachedThread);
     sem_destroy(&semaphore);
     print_array();
+    //close(file);
     return (0);
 }
 
